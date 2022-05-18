@@ -112,7 +112,7 @@ def importToJira():
                     jiraClient.add_comment(issue, comment)
                     attachScreenShots(jiraClient, reportPath, issue)
                 except JIRAError as err:
-                    print("Error: An exception occured while creating and issue: " + err.text)
+                    print("Error: An exception occured while creating an issue: " + err.text)
                     exit(1)
 
                 # TODO: 
