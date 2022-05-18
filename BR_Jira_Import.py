@@ -5,12 +5,12 @@ import tarfile
 import os
 import json
 from jira import JIRA
+from jira import Issue
 
 APPLICATION_TOKEN = ''
 JIRA_HOSTNAME = 'https://jira.atlassian.com'
 TEMP_DIRECTORY = 'H:/Work/Python/temp'
 
-#TODO add all necessary fields from bug report file
 class BugReport:
     def __init__(self):
         self.projectName = "SAGE"
@@ -58,8 +58,31 @@ def parseReport(reportPath):
     bugReport = BugReport()
 
     bugReport.description = data["description"]
+    bugReport.description = data["issueNumber"]
+    bugReport.description = data["summary"]
+    bugReport.description = data["project"]
+    bugReport.description = data["assignee"]
+    bugReport.description = data["originator"]
+    bugReport.description = data["affectedVersion"]
+    bugReport.description = data["stringName"]
+    bugReport.description = data["fundingsource"]
+    bugReport.description = data["model"]
+    bugReport.description = data["component"]
+    bugReport.description = data["type"]
+    bugReport.description = data["priority"]
+    bugReport.description = data["date"]
+    bugReport.description = data["category"]
+    bugReport.description = data["tsdLocation"]
+    bugReport.description = data["logLocation"]
+    bugReport.description = data["commLocation"]
+    bugReport.description = data["attachments"]
 
     return bugReport
+
+def attachScreenShots(jiraClient:JIRA, report, issue:Issue):
+    for file in os.scandir(report):
+        if file.path.endswith(".png") or file.path.endswith(".jpg"):
+            jiraClient.add_attachment(issue, attachment=file.path)
 
 def importToJira():
     jiraClient = JIRA(server=JIRA_HOSTNAME, token_auth=APPLICATION_TOKEN)
@@ -75,10 +98,14 @@ def importToJira():
         for file in os.scandir(report):
             if file.path.endswith(".json"):
                 br:BugReport = parseReport(file.path)
-                jiraClient.create_issue(project=br.project, summary=br.summary, description=br.description)
+                issue = jiraClient.create_issue(project=br.project, summary=br.summary, description=br.description)
+                comment = "Log Locations: " + TEMP_DIRECTORY + "/" + br.tsdLocation + ", " + TEMP_DIRECTORY + "/" + br.logLocation + ", " + TEMP_DIRECTORY + "/" + br.commLocation
+                jiraClient.add_comment(issue, comment)
+                attachScreenShots(jiraClient, report, issue)
 
 
 def main(argv):
+    print("Starting Bug Report Importer...")
     brTar = ''
     argLen = len(sys.argv)
 
