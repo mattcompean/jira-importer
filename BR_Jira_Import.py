@@ -104,14 +104,21 @@ def importToJira():
     for reportPath in reportPaths:
         for file in os.scandir(reportPath):
             if file.path.endswith(".json"):
-                br:BugReport = parseReport(file.path)
-                issue = jiraClient.create_issue(project=br.project, summary=br.summary, description=br.description)
-                print("Created issue: " + issue.id)
-                comment = "Log Locations: " + reportPath + "/" + br.tsdLocation + ", " + reportPath + "/" + br.logLocation + ", " + reportPath + "/" + br.commLocation
-                jiraClient.add_comment(issue, comment)
-                attachScreenShots(jiraClient, reportPath, issue)
+                try:
+                    br:BugReport = parseReport(file.path)
+                    issue = jiraClient.create_issue(project=br.project, summary=br.summary, description=br.description)
+                    print("Created issue: " + issue.id)
+                    comment = "Log Locations: " + reportPath + "/" + br.tsdLocation + ", " + reportPath + "/" + br.logLocation + ", " + reportPath + "/" + br.commLocation
+                    jiraClient.add_comment(issue, comment)
+                    attachScreenShots(jiraClient, reportPath, issue)
+                except JIRAError as err:
+                    print("Error: An exception occured while creating and issue: " + err.text)
+                    exit(1)
 
-                #Possible improvements later: add 
+                # TODO: 
+                # Add function to create a better formatted summarry
+                # Get relative paths for the log files
+                # Fill out the rest of the issue fields and transition the issue into next state if necessary
 
     jiraClient.close()
 
