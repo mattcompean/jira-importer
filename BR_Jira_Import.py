@@ -10,11 +10,11 @@ from jira import JIRAError
 
 APPLICATION_TOKEN = ''
 JIRA_HOSTNAME = 'https://jira.atlassian.com'
-OUTPUT_DIRECTORY = 'H:/Work/Python/temp'
+DEFAULT_OUTPUT_DIRECTORY = 'H:/Work/Python/temp'
 
 class BugReport:
     def __init__(self):
-        self.projectName = "SAGE"
+        self.projectName = "ESAGE"
         self.issueNumber = ""
         self.summary = ""
         self.project = ""
@@ -35,18 +35,18 @@ class BugReport:
         self.commLocation = ""
         self.attachments = ["", ""]
 
-def extractTar(tarPath):
-    print("Extracting " + tarPath + " to " + OUTPUT_DIRECTORY)
+def extractTar(tarPath, outputDirPath):
+    print("Extracting " + tarPath + " to " + outputDirPath)
     tar = tarfile.open(tarPath)
-    tar.extractall(OUTPUT_DIRECTORY)
+    tar.extractall(outputDirPath)
     tar.close()
 
-def getReportPaths():
+def getReportPaths(outputDirPath):
     print("Getting list of bug reports")
 
     reportPaths:array
-    for dir in os.scandir(OUTPUT_DIRECTORY):
-        fullPath = os.path.join(OUTPUT_DIRECTORY, dir)
+    for dir in os.scandir(outputDirPath):
+        fullPath = os.path.join(outputDirPath, dir)
         if isdir(fullPath):
             reportPaths.append(fullPath)
 
@@ -83,17 +83,17 @@ def parseReport(reportPath):
 def attachScreenShots(jiraClient:JIRA, reportPath, issue:Issue):
     print("Adding screen shots as attachments to issue " + issue.id)
     for file in os.scandir(reportPath):
-        if file.path.endswith(".png") or file.path.endswith(".jpg"):
+        if file.path.endswith(".png") or file.path.endswith(".jpg") or file.path.endswith(".jpeg"):
             jiraClient.add_attachment(issue, attachment=file.path)
 
-def importToJira():
+def importToJira(outputDirPath):
     try:
         jiraClient = JIRA(server=JIRA_HOSTNAME, token_auth=APPLICATION_TOKEN)
     except JIRAError as err:
         print("Error: An exception occured while attempting to authenticate the Jira Client: " + err.text)
         exit(1)
 
-    reportPaths = getReportPaths()
+    reportPaths = getReportPaths(outputDirPath)
 
     if len(reportPaths) > 0:
         reportPaths.sort()
@@ -106,7 +106,8 @@ def importToJira():
             if file.path.endswith(".json"):
                 try:
                     br:BugReport = parseReport(file.path)
-                    issue = jiraClient.create_issue(project=br.project, summary=br.summary, description=br.description)
+                    issue = jiraClient.create_issue(project=br.project, summary=br.summary, description=br.description, 
+                        fundingsource=br.fundingsource, affectedVersion=br.affectedVersion, type=br.type, originator=br.originator, issueCategory=br.category)
                     print("Created issue: " + issue.id)
                     comment = "Log Locations: " + reportPath + "/" + br.tsdLocation + ", " + reportPath + "/" + br.logLocation + ", " + reportPath + "/" + br.commLocation
                     jiraClient.add_comment(issue, comment)
@@ -118,7 +119,6 @@ def importToJira():
                 # TODO: 
                 # Add function to create a better formatted summarry
                 # Get relative paths for the log files
-                # Fill out the rest of the issue fields and transition the issue into next state if necessary
 
     jiraClient.close()
 
@@ -126,17 +126,26 @@ def importToJira():
 def main(argv):
     print("Starting Bug Report Importer...")
     brTar = ''
+    outputDir = ''
     argLen = len(sys.argv)
 
-    if argLen > 0 and argLen <= 2:
+    # Note: See if there are any core python libraries that let you play with CLI arguments
+    if argLen == 2:
         brTar = argv[1]
+    elif argLen == 3:
+        brTar = argv[1]
+        outputDir = argv[2]
     else:
-        print("Usage: BR_Jira_Import.py <Path to Bug Report Tar>")
+        print("Usage: BR_Jira_Import.py <Path to Bug Report Tar> <Optional tar extraction output path>")
         sys.exit(1)
+
+    # Use default location if the user didn't enter a path
+    if not outputDir:
+        outputDir = DEFAULT_OUTPUT_DIRECTORY
 
     if brTar.endswith('.tar', '.tar.gz', '.tgz', '.gz'):
         if os.path.exists(brTar):
-            extractTar(brTar)
+            extractTar(brTar, outputDir)
         else:
             print("Error: " + brTar + " does not exist")
             sys.exit(1)
@@ -144,4 +153,4 @@ def main(argv):
         print("Error: Bug Report archive must be in .tar|.tar.gz|.tgz|.gz format")
         sys.exit(1)
     
-    importToJira()
+    importToJira(outputDir)
