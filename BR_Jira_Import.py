@@ -1,5 +1,4 @@
 from array import array
-from genericpath import isdir
 import sys
 import tarfile
 import os
@@ -47,7 +46,7 @@ def getReportPaths(outputDirPath):
     reportPaths:array
     for dir in os.scandir(outputDirPath):
         fullPath = os.path.join(outputDirPath, dir)
-        if isdir(fullPath):
+        if os.path.isdir(fullPath):
             reportPaths.append(fullPath)
 
     return reportPaths
